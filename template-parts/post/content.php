@@ -33,7 +33,7 @@
 
 		if ( is_single() ) {
 			the_title( '<h1 class="entry-title">', '</h1>' );
-                        echo '<h3 ">' . get_post_meta($post->ID, '_unprefix_subtitle', true) . '</h3>';
+                        echo '<p>' . get_post_meta($post->ID, '_unprefix_subtitle', true) . '</p>';
 		} elseif ( is_front_page() && is_home() ) {
 			the_title( '<h3 class="entry-title"><a href="' . esc_url( get_permalink() ) . '" rel="bookmark">', '</a></h3>' );
 		} else {
@@ -43,6 +43,7 @@
 	</header><!-- .entry-header -->
 
 	<?php if ( '' !== get_the_post_thumbnail() && ! is_single() ) : ?>
+             <?php   echo '<p>' . get_post_meta($post->ID, '_unprefix_subtitle', true) . '</p>'; ?>
 		<div class="post-thumbnail">
 			<a href="<?php the_permalink(); ?>">
 				<?php the_post_thumbnail( 'twentyseventeen-featured-image' ); ?>
@@ -68,9 +69,13 @@
 	</div><!-- .entry-content -->
 
 	<?php
+	echo '<p>Price: ' . get_post_meta($post->ID, '_movie_price', true) . get_woocommerce_currency_symbol() . '</p>';
+	echo '<a href="/shop/?add-to-cart=' . $post->ID . '"><button>Buy now</button> </a>';
+  echo '<button class="add_to_favorites" data-id="'. $post->ID .'">Add to favorites</button>';
+
 	if ( is_single() ) {
 		twentyseventeen_entry_footer();
 	}
 	?>
-
+	
 </article><!-- #post-## -->

@@ -2,12 +2,13 @@
 // Exit if accessed directly
 if (!defined('ABSPATH'))
   exit;
-
-
+require_once($_SERVER['DOCUMENT_ROOT'] . '/dump.php' ); //for debug only
 if (!function_exists('chld_thm_cfg_parent_css')):
 
   function chld_thm_cfg_parent_css() {
     wp_enqueue_style('chld_thm_cfg_parent', trailingslashit(get_template_directory_uri()) . 'style.css', array());
+     wp_enqueue_script('favorites', get_stylesheet_directory_uri() . '/js/favorites.js');
+
   }
 
 endif;
@@ -23,10 +24,10 @@ function woocommerce_support() {
   add_theme_support('woocommerce');
 }
 
-if (!function_exists('movies_post_type')) {
+if (!function_exists('movies')) {
 
 // Register Custom Post Type
-  function movies_post_type() {
+  function movies() {
 
     $labels = array(
         'name' => 'movies',
@@ -76,28 +77,42 @@ if (!function_exists('movies_post_type')) {
         'publicly_queryable' => true,
         'capability_type' => 'page',
     );
-    register_post_type('movie_post_type', $args);
+    register_post_type('movie', $args);
   }
 
-  add_action('init', 'movies_post_type', 0);
+  add_action('init', 'movies', 0);
 }
 // Adding Sub Title in Movies posts
 
 function unprefix_subtitle($post) {
 
-  if (!in_array($post->post_type, ['movie_post_type'], true)) {
+  if (!in_array($post->post_type, ['movie'], true)) {
     return;
   }
 
   $_stitle = sanitize_text_field(get_post_meta($post->ID, '_unprefix_subtitle', true));
 
-  echo '<label for="unprefix_subtitle">' . __('Sub Title') . '</label>';
-  echo '<input type="text" name="unprefix_subtitle" id="unprefix_subtitle" value="' . $_stitle . '" size="30" spellcheck="true" autocomplete="off" />';
+  echo '<label for="unprefix_subtitle">' . __('Sub Title: ') . '</label>';
+  echo '<input type="text" name="unprefix_subtitle" id="unprefix_subtitle" value="' . $_stitle . '" size="80" spellcheck="true" autocomplete="off" />';
 }
+
+function movie_price($post) {
+
+  if (!in_array($post->post_type, ['movie'], true)) {
+    return;
+  }
+
+  $_stitle = get_post_meta($post->ID, '_movie_price', true);
+
+  echo '<label for="movie_price">' . __('Price: ') . '</label>';
+  echo '<input type="text" name="movie_price" id="movie_price" value="' . $_stitle . '" size="20" spellcheck="true" autocomplete="off" />';
+}
+
+
 
 function unprefix_save_subtitle($post_ID, $post, $update) {
 
-  if (!in_array($post->post_type, ['movie_post_type'], true)) {
+  if (!in_array($post->post_type, ['movie'], true)) {
     return;
   }
 
@@ -122,10 +137,37 @@ function unprefix_save_subtitle($post_ID, $post, $update) {
   }
 }
 
+function unprefix_save_price($post_ID, $post, $update) {
+
+  if (!in_array($post->post_type, ['movie'], true)) {
+    return;
+  }
+
+  // Prevent to execute twice.
+  if (defined('DOING_AJAX') && DOING_AJAX) {
+    return;
+  }
+
+  if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+    return;
+  }
+
+  // Get the subtitle value from $_POST.
+  $_stitle = filter_input(INPUT_POST, 'movie_price', FILTER_SANITIZE_STRING);
+
+  if ($update) {
+    // Update the post meta.
+    update_post_meta($post_ID, '_movie_price', sanitize_text_field($_stitle));
+  } else if (!empty($_stitle)) {
+    // Add unique post meta.
+    add_post_meta($post_ID, '_movie_price', sanitize_text_field($_stitle), true);
+  }
+}
 add_action('edit_form_after_title', 'unprefix_subtitle', 20);
 add_action('wp_insert_post', 'unprefix_save_subtitle', 20, 3);
 
-
+add_action('edit_form_after_title', 'movie_price', 20);
+add_action('wp_insert_post', 'unprefix_save_price', 20, 3);
 
 
 /* Add field Skype in page User edit in admin panel */
@@ -148,7 +190,7 @@ function show_fields() {
   ?>
   <p>
       <label>Skype:<br/>
-      <input id="skype" class="input" type="text" value="<?php echo $_POST['skype']; ?>" name="skype" /></label>
+      <input id="skype" class="input" type="text" value="" name="skype" /></label>
   </p>
 
   <?php
@@ -172,14 +214,9 @@ function register_fields($user_id, $password = "", $meta = array()) {
 }
 
 
-// custom_woocommerce_template_loop_add_to_cart
-add_filter( 'woocommerce_product_add_to_cart_text' , 'custom_woocommerce_product_add_to_cart_text' );
-function custom_woocommerce_product_add_to_cart_text() {
-  return __( ' Buy now', 'woocommerce' );
-}
 
 
-remove_action( 'woocommerce_proceed_to_checkout', 'woocommerce_button_proceed_to_checkout', 20 );
+//remove_action( 'woocommerce_proceed_to_checkout', 'woocommerce_button_proceed_to_checkout', 20 );
 
 // Redirect to PayPal
 add_filter('woocommerce_add_to_cart_redirect', 'custom_add_to_cart_redirect');
@@ -187,6 +224,8 @@ add_filter('woocommerce_add_to_cart_redirect', 'custom_add_to_cart_redirect');
 function custom_add_to_cart_redirect()
 {
     wc_clear_notices();
-    $checkout_url = "/cart/?startcheckout=true";
+    $checkout_url = "/cart";
     return $checkout_url;
 }
+
+include('custom_product.php');
